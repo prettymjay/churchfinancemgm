@@ -1,0 +1,47 @@
+.page {
+  padding: 30px;
+  background: #f5f6fa;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+button {
+  background: #2d4a9e;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+}
+
+.table {
+  margin-top: 20px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.header,
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  padding: 10px 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
