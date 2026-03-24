@@ -1,45 +1,43 @@
-import React from "react";
+import type { ReactNode } from "react";
+import { X } from "lucide-react";
 
-export default function Modal({ open, onClose, children }: any) {
-  if (!open) return null;
+interface ModalProps {
+  children: ReactNode;
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+}
+
+export default function Modal({ children, isOpen, onClose, title }: ModalProps) {
+  if (!isOpen) {
+    return null;
+  }
 
   return (
-    <div style={overlay}>
-      <div style={modal}>
-        <button onClick={onClose} style={closeBtn}>✕</button>
+    <div className="modal-overlay" role="presentation" onClick={onClose}>
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="modal-header">
+          <div>
+            <h3>{title}</h3>
+            <p>All changes are stored offline on this device.</p>
+          </div>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Close dialog"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
         {children}
       </div>
     </div>
   );
 }
-
-const overlay = {
-  position: "fixed" as const,
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.4)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 1000,
-};
-
-const modal = {
-  background: "#fff",
-  padding: 30,
-  borderRadius: 12,
-  width: 400,
-  position: "relative" as const,
-};
-
-const closeBtn = {
-  position: "absolute" as const,
-  right: 10,
-  top: 10,
-  border: "none",
-  background: "transparent",
-  fontSize: 18,
-  cursor: "pointer",
-};

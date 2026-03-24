@@ -1,44 +1,61 @@
-import { Link, useLocation } from "react-router-dom";
+import {
+  ChartColumnBig,
+  CircleDollarSign,
+  FileBarChart2,
+  ReceiptText,
+  Settings,
+} from "lucide-react";
+import type { PageName } from "../../types";
 
-export default function Sidebar() {
-  const { pathname } = useLocation();
+const menu: Array<{
+  icon: typeof ChartColumnBig;
+  label: PageName;
+}> = [
+  { icon: ChartColumnBig, label: "Dashboard" },
+  { icon: CircleDollarSign, label: "Income" },
+  { icon: ReceiptText, label: "Expenses" },
+  { icon: FileBarChart2, label: "Reports" },
+  { icon: Settings, label: "Settings" },
+];
 
-  const menu = [
-    { name: "Dashboard", path: "/" },
-    { name: "Income", path: "/income" },
-    { name: "Expenses", path: "/expenses" },
-    { name: "Reports", path: "/reports" },
-    { name: "Settings", path: "/settings" },
-  ];
+interface SidebarProps {
+  currentPage: PageName;
+  setPage: (page: PageName) => void;
+}
 
+export default function Sidebar({ currentPage, setPage }: SidebarProps) {
   return (
-    <div
-      style={{
-        width: 220,
-        background: "#fff",
-        padding: 20,
-        borderRight: "1px solid #eee",
-      }}
-    >
-      <h2>The Sacred Ledger</h2>
+    <aside className="sidebar">
+      <div>
+        <div className="brand">
+          <h2>Church Financial Management System</h2>
+          <span>Offline Church Ledger</span>
+        </div>
 
-      {menu.map((m) => (
-        <Link
-          key={m.path}
-          to={m.path}
-          style={{
-            display: "block",
-            padding: 10,
-            marginTop: 10,
-            borderRadius: 8,
-            background: pathname === m.path ? "#1e3a8a" : "transparent",
-            color: pathname === m.path ? "#fff" : "#000",
-            textDecoration: "none",
-          }}
-        >
-          {m.name}
-        </Link>
-      ))}
-    </div>
+        <nav className="sidebar-nav">
+          {menu.map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              type="button"
+              className={`sidebar-link ${currentPage === label ? "active" : ""}`}
+              onClick={() => setPage(label)}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      <div className="sidebar-footer">
+        <div className="sidebar-user">
+          <div className="sidebar-user-avatar">A</div>
+          <div>
+            <strong>Admin User</strong>
+            <span>Lead Steward</span>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }

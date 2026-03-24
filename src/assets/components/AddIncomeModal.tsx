@@ -1,73 +1,129 @@
-import { useState } from "react";
-import { api } from "../../utils/api";
+import { useEffect, useState } from "react";
+import Modal from "./ui/Modal";
+import Button from "./ui/Button";
+import type { Category, Transaction, TransactionFormValues } from "../../types";
 
-export default function AddIncomeModal({ onClose, onSaved }: any) {
-  const [form, setForm] = useState({
-    date: "",
-    category: "Offering",
-    amount: "",
-  });
+interface AddIncomeModalProps {
+  categories: Category[];
+  initialData?: Transaction | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (values: TransactionFormValues, id?: string) => void;
+}
 
-  const save = async () => {
-    if (!form.date || !form.amount) {
-      alert("Fill all fields");
+const createEmptyForm = (): TransactionFormValues => ({
+  amount: 0,
+  category: "",
+  date: new Date().toISOString().slice(0, 10),
+  description: "",
+});
+
+export default function AddIncomeModal({
+  categories,
+  initialData,
+  isOpen,
+  onClose,
+  onSave,
+}: AddIncomeModalProps) {
+  const [form, setForm] = useState<TransactionFormValues>(createEmptyForm());
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        amount: initialData.amount,
+        category: initialData.category,
+        date: initialData.date,
+        description: initialData.description,
+      });
       return;
     }
 
-    await api.post("/income", form);
-    onSaved();
-    onClose();
+    setForm(createEmptyForm());
+  }, [initialData, isOpen]);
+
+  const handleSubmit = () => {
+    if (!form.amount || !form.category || !form.date) {
+      return;
+    }
+
+    onSave(form, initialData?.id);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white w-[420px] p-6 rounded-xl shadow-xl">
-        <h2 className="text-xl font-bold mb-4 text-center">
-          Add Income
-        </h2>
-
-        {/* DATE */}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={initialData ? "Edit Income Record" : "Record New Income"}
+    >
+      <div className="modal-form">
+        <label className="field-label">Amount</label>
         <input
-          type="date"
-          className="w-full border p-3 rounded-lg mb-3"
-          value={form.date}
-          onChange={(e) =>
-            setForm({ ...form, date: e.target.value })
+          className="app-input"
+          type="number"
+          min="0"
+          value={form.amount || ""}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              amount: Number(event.target.value),
+            }))
           }
         />
 
-        {/* CATEGORY */}
+        <label className="field-label">Category</label>
         <select
-          className="w-full border p-3 rounded-lg mb-3"
+          className="app-input"
           value={form.category}
-          onChange={(e) =>
-            setForm({ ...form, category: e.target.value })
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              category: event.target.value,
+            }))
           }
         >
-          <option>Offering</option>
-          <option>Tithes</option>
-          <option>Mission</option>
-          <option>Building Fund</option>
+          <option value="">Select income category</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.name}>
+              {category.name}
+            </option>
+          ))}
         </select>
 
-        {/* AMOUNT */}
+        <label className="field-label">Date</label>
         <input
-          type="number"
-          placeholder="Amount"
-          className="w-full border p-3 rounded-lg mb-4"
-          value={form.amount}
-          onChange={(e) =>
-            setForm({ ...form, amount: e.target.value })
+          className="app-input"
+          type="date"
+          value={form.date}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              date: event.target.value,
+            }))
           }
         />
 
-        <button
-          onClick={save}
-          className="w-full bg-blue-900 text-white py-3 rounded-lg"
-        >
-          Save
-        </button>
+        <label className="field-label">Notes</label>
+        <textarea
+          className="app-input"
+          rows={4}
+          value={form.description}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              description: event.target.value,
+            }))
+          }
+        />
       </div>
-    </div>
+
+      <div className="modal-actions">
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit}>
+          {initialData ? "Update Income" : "Save Income"}
+        </Button>
+      </div>
+    </Modal>
   );
 }

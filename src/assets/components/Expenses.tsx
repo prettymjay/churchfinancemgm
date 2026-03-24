@@ -1,115 +1,227 @@
-import { useEffect, useState } from "react";
-import { api } from "../../utils/api";
+import { useMemo, useState } from "react";
+import { Filter, Plus, Search } from "lucide-react";
 import AddExpenseModal from "./AddExpenseModal";
+import Button from "./ui/Button";
+import Card from "./ui/Card";
+import {
+  deleteTransaction,
+  getCategories,
+  getTransactions,
+  upsertTransaction,
+} from "../../utils/storage";
+import type { Transaction, TransactionFormValues } from "../../types";
 
-export default function Expenses() {
-  const [data, setData] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [editData, setEditData] = useState<any>(null);
+const currency = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+});
 
-  useEffect(() => {
-    load();
-  }, []);
+interface ExpensesProps {
+  onDataChange: () => void;
+  onNotify: (message: string) => void;
+  refreshKey: number;
+}
 
-  const load = async () => {
-    const res = await api.get("/expenses");
-    setData(res || []);
+export default function Expenses({ onDataChange, onNotify, refreshKey }: ExpensesProps) {
+  void refreshKey;
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
+
+  const categories = getCategories().filter((category) => category.type === "expense");
+  const records = getTransactions().filter((transaction) => transaction.type === "expense");
+
+  const filteredRecords = useMemo(
+    () =>
+      records.filter((record) => {
+        const lowerQuery = query.toLowerCase();
+        return (
+          record.description.toLowerCase().includes(lowerQuery) ||
+          record.category.toLowerCase().includes(lowerQuery)
+        );
+      }),
+    [records, query],
+  );
+
+  const totalExpenses = records.reduce((total, item) => total + item.amount, 0);
+  const remainingBudget = Math.max(
+    0,
+    getTransactions()
+      .filter((item) => item.type === "income")
+      .reduce((total, item) => total + item.amount, 0) - totalExpenses,
+  );
+
+  const handleSave = (values: TransactionFormValues, id?: string) => {
+    upsertTransaction("expense", values, id);
+    setIsOpen(false);
+    setEditing(null);
+    onDataChange();
+    onNotify(id ? "Updated Successfully" : "Successfully Saved");
   };
 
-  // SAVE (ADD OR UPDATE)
-  const save = async (form: any) => {
-    if (editData) {
-      await api.put(`/expenses/${editData.id}`, form);
-    } else {
-      await api.post("/expenses", form);
-    }
-    setEditData(null);
-    load();
-  };
-
-  const remove = async (id: number) => {
-    await api.delete(`/expenses${id}`);
-    load();
-  };
-
-  const openAdd = () => {
-    setEditData(null);
-    setOpen(true);
-  };
-
-  const openEdit = (item: any) => {
-    setEditData(item);
-    setOpen(true);
+  const handleDelete = (id: string) => {
+    deleteTransaction(id);
+    onDataChange();
+    onNotify("Successfully Deleted");
   };
 
   return (
-    <div>
-      <h1>Expenses Management</h1>
-
-      <button onClick={openAdd} style={addBtn}>
-        + Record New Offering
-      </button>
-
-      {/* TABLE */}
-      <div style={{ marginTop: 20, background: "#fff", borderRadius: 10 }}>
-        {data.slice(0, 5).map((i) => (
-          <div key={i.id} style={row}>
-            <div>{i.date}</div>
-            <div>{i.category}</div>
-            <div>₱{i.amount}</div>
-
-            <div>
-              <button onClick={() => openEdit(i)} style={editBtn}>
-                Edit
-              </button>
-              <button onClick={() => remove(i.id)} style={deleteBtn}>
-                Delete
-              </button>
-            </div>
+    <div className="page-grid">
+      <div className="stats-grid expenses">
+        <Card className="metric-card">
+          <div className="metric-card-top">
+            <span className="metric-label">Total Monthly Expenses</span>
+            <strong className="metric-value metric-value-compact">{currency.format(totalExpenses)}</strong>
           </div>
-        ))}
+          <p className="danger-copy">Updated from offline bookkeeping records</p>
+        </Card>
+        <Card className="metric-card">
+          <div className="metric-card-top">
+            <span className="metric-label">Recorded Entries</span>
+            <strong className="metric-value metric-value-compact">{records.length.toString().padStart(2, "0")}</strong>
+          </div>
+          <p>All expenses are saved locally on this device.</p>
+        </Card>
+        <div className="hero-card blue">
+          <span>Remaining Budget</span>
+          <strong>{currency.format(remainingBudget)}</strong>
+          <p>Available funds after current expenses</p>
+        </div>
       </div>
 
-      {/* MODAL */}
+      <Card>
+        <div className="toolbar">
+          <div className="search-box">
+            <Search size={18} />
+            <input
+              className="search-input"
+              placeholder="Search by vendor or description..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <button type="button" className="button secondary small">
+            <Filter size={16} />
+            Filter
+          </button>
+          <Button
+            icon={<Plus size={16} />}
+            onClick={() => {
+              setEditing(null);
+              setIsOpen(true);
+            }}
+          >
+            Record New Expense
+          </Button>
+        </div>
+
+        <div className="table-shell">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRecords.map((record) => (
+                <tr key={record.id}>
+                  <td>{new Date(record.date).toLocaleDateString("en-US")}</td>
+                  <td>{record.description}</td>
+                  <td>
+                    <span className="table-pill expense">{record.category}</span>
+                  </td>
+                  <td className="money-out">{currency.format(record.amount)}</td>
+                  <td>
+                    <div className="row-actions">
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => {
+                          setEditing(record);
+                          setIsOpen(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="text-button danger-text"
+                        onClick={() => handleDelete(record.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="empty-state-cell">
+                    No expense records found.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <div className="split-panels">
+        <Card>
+          <div className="panel-header">
+            <h3>Spending by Category</h3>
+          </div>
+          <div className="stack-list">
+            {categories.map((category) => {
+              const amount = records
+                .filter((item) => item.category === category.name)
+                .reduce((total, item) => total + item.amount, 0);
+              const ratio = totalExpenses ? (amount / totalExpenses) * 100 : 0;
+
+              return (
+                <div key={category.id} className="stack-item">
+                  <div className="stack-header">
+                    <span>{category.name}</span>
+                    <strong>{currency.format(amount)}</strong>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${ratio}%`, backgroundColor: category.color }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card>
+          <div className="panel-header">
+            <h3>Policy Reminder</h3>
+          </div>
+          <p className="muted-copy">
+            Keep official receipts for major purchases and review ministry
+            expenses before month-end reporting. This ledger is fully offline,
+            so device backups are important.
+          </p>
+        </Card>
+      </div>
+
       <AddExpenseModal
-        open={open}
-        onClose={() => setOpen(false)}
-        onSave={save}
-        editData={editData}
+        categories={categories}
+        initialData={editing}
+        isOpen={isOpen}
+        onClose={() => {
+          setEditing(null);
+          setIsOpen(false);
+        }}
+        onSave={handleSave}
       />
     </div>
   );
 }
-
-const row = {
-  display: "flex",
-  justifyContent: "space-between",
-  padding: 15,
-  borderBottom: "1px solid #eee",
-};
-
-const addBtn = {
-  background: "#1e3a8a",
-  color: "#fff",
-  padding: "10px 20px",
-  border: "none",
-  borderRadius: 8,
-  cursor: "pointer",
-};
-
-const editBtn = {
-  marginRight: 10,
-  background: "#1e3a8a",
-  color: "#fff",
-  border: "none",
-  padding: "6px 12px",
-  borderRadius: 6,
-};
-
-const deleteBtn = {
-  background: "#ef4444",
-  color: "#fff",
-  border: "none",
-  padding: "6px 12px",
-  borderRadius: 6,
-};

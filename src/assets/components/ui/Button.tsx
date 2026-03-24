@@ -1,13 +1,24 @@
-type Props = {
-  children: any;
-  onClick?: () => void;
-  variant?: "primary" | "danger" | "outline";
-};
+import type { ReactNode } from "react";
 
-export default function Button({ children, onClick, variant = "primary" }: Props) {
+interface ButtonProps {
+  children: ReactNode;
+  icon?: ReactNode;
+  onClick?: () => void;
+  type?: "button" | "submit";
+  variant?: "primary" | "secondary" | "danger" | "success";
+}
+
+export default function Button({
+  children,
+  icon,
+  onClick,
+  type = "button",
+  variant = "primary",
+}: ButtonProps) {
   return (
-    <button className={`btn ${variant}`} onClick={onClick}>
-      {children}
+    <button type={type} onClick={onClick} className={`button ${variant}`}>
+      {icon}
+      <span>{children}</span>
     </button>
   );
 }

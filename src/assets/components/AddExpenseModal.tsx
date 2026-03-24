@@ -1,80 +1,129 @@
-import { useState } from "react"
-import { getCategories } from "../../utils/storage"
-const categories = getCategories()
+import { useEffect, useState } from "react";
+import Modal from "./ui/Modal";
+import Button from "./ui/Button";
+import type { Category, Transaction, TransactionFormValues } from "../../types";
 
-const AddExpenseModal = ({ onClose, onSave }: any) => {
-  const [amount, setAmount] = useState("")
-  const [category, setCategory] = useState("")
-  const [description, setDescription] = useState("")
-
-  const handleSubmit = () => {
-    const newExpense = {
-      id: Date.now(),
-      amount: Number(amount),
-      category,
-      description,
-      date: new Date().toISOString(),
-    }
-
-    const existing = JSON.parse(localStorage.getItem("expenses") || "[]")
-    localStorage.setItem("expenses", JSON.stringify([...existing, newExpense]))
-
-    onSave()
-    onClose()
-  }
-
-  <select
-  className="w-full mb-2 p-2 border rounded"
-  value={category}
-  onChange={(e) => setCategory(e.target.value)}
->
-  <option value="">Select Category</option>
-  {categories.map((cat: string, i: number) => (
-    <option key={i} value={cat}>{cat}</option>
-  ))}
-</select>
-
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded w-96">
-        <h2 className="text-xl font-bold mb-4">Add Expense</h2>
-
-        <input
-          type="number"
-          placeholder="Amount"
-          className="w-full mb-2 p-2 border rounded"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-
-        <input
-          type="text"
-          placeholder="Category"
-          className="w-full mb-2 p-2 border rounded"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
-
-        <input
-          type="text"
-          placeholder="Description"
-          className="w-full mb-4 p-2 border rounded"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-300 rounded">
-            Cancel
-          </button>
-          <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded">
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+interface AddExpenseModalProps {
+  categories: Category[];
+  initialData?: Transaction | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (values: TransactionFormValues, id?: string) => void;
 }
 
-export default AddExpenseModal
+const createEmptyForm = (): TransactionFormValues => ({
+  amount: 0,
+  category: "",
+  date: new Date().toISOString().slice(0, 10),
+  description: "",
+});
+
+export default function AddExpenseModal({
+  categories,
+  initialData,
+  isOpen,
+  onClose,
+  onSave,
+}: AddExpenseModalProps) {
+  const [form, setForm] = useState<TransactionFormValues>(createEmptyForm());
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        amount: initialData.amount,
+        category: initialData.category,
+        date: initialData.date,
+        description: initialData.description,
+      });
+      return;
+    }
+
+    setForm(createEmptyForm());
+  }, [initialData, isOpen]);
+
+  const handleSubmit = () => {
+    if (!form.amount || !form.category || !form.date) {
+      return;
+    }
+
+    onSave(form, initialData?.id);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={initialData ? "Edit Expense Record" : "Record New Expense"}
+    >
+      <div className="modal-form">
+        <label className="field-label">Amount</label>
+        <input
+          className="app-input"
+          type="number"
+          min="0"
+          value={form.amount || ""}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              amount: Number(event.target.value),
+            }))
+          }
+        />
+
+        <label className="field-label">Category</label>
+        <select
+          className="app-input"
+          value={form.category}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              category: event.target.value,
+            }))
+          }
+        >
+          <option value="">Select expense category</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.name}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+
+        <label className="field-label">Date</label>
+        <input
+          className="app-input"
+          type="date"
+          value={form.date}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              date: event.target.value,
+            }))
+          }
+        />
+
+        <label className="field-label">Description</label>
+        <textarea
+          className="app-input"
+          rows={4}
+          value={form.description}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              description: event.target.value,
+            }))
+          }
+        />
+      </div>
+
+      <div className="modal-actions">
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit}>
+          {initialData ? "Update Expense" : "Save Expense"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
